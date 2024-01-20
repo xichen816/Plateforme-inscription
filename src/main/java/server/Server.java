@@ -32,8 +32,10 @@ public class Server {
     private ObjectOutputStream objectOutputStream;
     private final ArrayList<EventHandler> handlers;
 
+    public String nomSession;
+
     /**
-     * Créer le constructeur de l'objet serveur qui est une instance de 'ServerSocket' ,traitant au maximum 1 client.
+     * Créer le constructeur de l'objet serveur qui est une instance de 'ServerSocket', traitant au maximum 1 client.
      * L'objet contient une liste de gestionnaire d'évènement.
      * @param port la valeur de laquelle on définit le port dans la création du serveur
      * @exception IOException si une erreur se produit sur les entrées
@@ -59,7 +61,7 @@ public class Server {
      * @param cmd la commande à envoyer aux gestionnaires d'événements
      * @param arg la commande à envoyer aux gestionnaires d'événements
      */
-    private void alertHandlers(String cmd, String arg) {
+    private void alertHandlers(String cmd, String arg) throws Exception {
         for (EventHandler h : this.handlers) {
             h.handle(cmd, arg);
         }
@@ -87,6 +89,7 @@ public class Server {
         }
     }
 
+
     /**
      * Cette méthode répond aux types d'exceptions suivants par une alerte :
      * @exception IOException si une erreur se produit sur les entrées
@@ -94,7 +97,7 @@ public class Server {
      * @see IOException lorsqu'une erreur survient lors de la lecture du flux d'entrée
      * @exception NullPointerException si la ligne de commande est vide
      */
-    public void listen() throws IOException, ClassNotFoundException {
+    public void listen() throws Exception {
         String line;
         if ((line = this.objectInputStream.readObject().toString()) != null) {
             Pair<String, String> parts = processCommandLine(line);
@@ -137,7 +140,7 @@ public class Server {
      @param cmd la commande à envoyer aux gestionnaires d'événements
      @param arg la commande à envoyer aux gestionnaires d'événements
      */
-    public void handleEvents(String cmd, String arg) {
+    public void handleEvents(String cmd, String arg) throws Exception {
         if (cmd.equals(REGISTER_COMMAND)) {
             handleRegistration();
         } else if (cmd.equals(LOAD_COMMAND)) {
@@ -152,58 +155,88 @@ public class Server {
      * @param arg la session pour laquelle on veut récupérer la liste des cours
      * @throws Exception si une erreur se produit lors de la lecture du fichier ou de l'écriture de l'objet dans le flux
      */
-    public void handleLoadCourses(String arg) {
+    public void handleLoadCourses(String arg) throws Exception {
 
         File fichierCours = new File("cours.txt");
 
-        try {
-            Scanner scan = new Scanner(fichierCours);
 
-            ArrayList<Course> listCourse = new ArrayList<Course>;
+        try (Scanner scan = new Scanner(fichierCours)) {
 
-            String code_du_cours = scan.nextLine();
-            String nom_du_cours = scan.nextLine().substring(1);
-            String session = scan.nextLine().substring(2); 
+            ArrayList<Course> coursHiver = new ArrayList<>();
+            ArrayList<Course> coursAutomne = new ArrayList<>();
+            ArrayList<Course> coursEte = new ArrayList<>();
 
             while (scan.hasNextLine()) {
-                Course donneeCours = new Course(nom_du_cours, code_du_cours, session);
-                listCourse.add(donneeCours);
+                String code_du_cours = scan.nextLine();
+                String nom_du_cours = scan.nextLine().substring(1);
+                String session = scan.nextLine().substring(2);
+
+
+
+                Course donneeCours = new Course(code_du_cours, nom_du_cours, session);
+
+                switch (session) {
+                    case "2":
+                        coursHiver.add(donneeCours);
+                        break;
+
+                    case "1":
+                        coursAutomne.add(donneeCours);
+                        break;
+
+                    case "3 ":
+                        coursEte.add(donneeCours);
+                        break;
+                }
             }
 
             switch(arg) {
-                case "Hiver":
-                    FileOutputStream fileOs = new FileOutputStream("coursHivers.dat");
-                    ObjectOutputStream os = new ObjectOutputStream(fileOs);
-                    os.writeObject();
-                    os.close();
+                case "2":
+                    nomSession = "hiver";
+                    FileOutputStream hiver = new FileOutputStream("coursHiver.dat");
+                    ObjectOutputStream hiverStream = new ObjectOutputStream(hiver);
+                    hiverStream.writeObject(coursHiver);
+                    hiverStream.close();
+                    break;
 
-                case "Automne" :
-                    //TODO
+                case "1" :
+                    nomSession = "automne";
+                    FileOutputStream automne = new FileOutputStream("coursAutomne.dat");
+                    ObjectOutputStream automneStream = new ObjectOutputStream(automne);
+                    automneStream.writeObject(coursAutomne);
+                    automneStream.close();
+                    break;
 
+                case "3" :
+                    nomSession = "ete";
+                    FileOutputStream ete = new FileOutputStream("coursAutomne.dat");
+                    ObjectOutputStream eteStream = new ObjectOutputStream(ete);
+                    eteStream.writeObject(coursEte);
+                    eteStream.close();
+                    break;
+
+                default:
+                    throw new IllegalArgumentException("La session spécifiée est invalide.");
             }
 
-        } catch (Exception e) {
-            // si une erreur se produit lors de la lecture du fichier ou de l'écriture de l'objet dans le flux
-            // FileNotFoundException
-            // IOException
+        } catch (IOException e) {
+            throw new Exception("Une erreur est survenue lors de la lecture du fichier ou de l'écriture du fichier. Veuillez réessayer.", e);
         }
     }
 
-    /**
-     * Traite une demande d'inscription en enregistrant le formulaire d'inscription du client dans un fichier.
+        /**
+     * Traite une demande d'inscription en enregistrant les informations du client dans le fichier correspondant.
      * @throws IOException si une erreur survient lors de la lecture ou de l'écriture du formulaire d'inscription
      * @throws ClassNotFoundException si la classe RegistrationForm n'est pas trouvée lors de la serialisation
      */
     public void handleRegistration() throws Exception {
         RegistrationForm registrationForm;
-        File registrationFile = new File("registration_form.txt");
         try {
             while ((registrationForm = (RegistrationForm) this.objectInputStream.readObject()) != null) {
-                try (FileOutputStream fos = new FileOutputStream(registrationFile);
+                try (FileOutputStream fos = new FileOutputStream("inscription.txt");
                      ObjectOutputStream oos = new ObjectOutputStream(fos)) {
                     oos.writeObject(registrationForm);
                     System.out.println("Votre inscription est enregistrée.");
-                    oos.close();
                 }
             }
 

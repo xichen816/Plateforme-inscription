@@ -1,4 +1,6 @@
-package server.models;
+package mvc;
+
+import server.models.Course;
 
 import java.io.Serializable;
 
