@@ -11,7 +11,6 @@ public class ServerLauncher {
             server.run();
         } catch (Exception e) {
             e.printStackTrace();
-            //TODO
         }
     }
 }
